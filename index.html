@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Khám phá các vùng biển Việt Nam – mô phỏng 3D</title>
+<style>
+:root{--bg:#dcecf5;--panel:#ffffffee;--ink:#10304a;--mute:#496679;--line:#b7cfdc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a1a2a;--panel:#10263aee;--ink:#e4f0f8;--mute:#9bb5c6;--line:#2b4a60}}
+:root[data-theme="dark"]{--bg:#0a1a2a;--panel:#10263aee;--ink:#e4f0f8;--mute:#9bb5c6;--line:#2b4a60}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro","Segoe UI",Roboto,sans-serif;overflow:hidden}
+#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block}
+header{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:auto;max-width:calc(100% - 24px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;pointer-events:none}
+h1{font-size:clamp(17px,2.6vw,24px);margin:0;font-weight:800}
+header p{margin:2px 0 0;font-size:12px;color:var(--mute)}
+#chips{position:absolute;top:calc(env(safe-area-inset-top,0px) + 80px);left:12px;right:12px;display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+#chips button{flex:0 0 auto;border:1px solid var(--line);border-left:5px solid var(--ac);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+#chips button.on{background:var(--ac);color:#fff}
+#chips button:focus-visible,#info .x:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+#panel{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:12.5px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;max-width:calc(100% - 24px)}
+#panel label{display:flex;gap:4px;align-items:center;cursor:pointer}
+#panel select{font:inherit;font-size:12.5px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 4px}
+#info{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 124px);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);width:min(390px,calc(100% - 24px));overflow:auto;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--ac,#2f86e0);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.55;backdrop-filter:blur(8px);z-index:5}
+#info[hidden]{display:none}
+#info h2{margin:0 30px 2px 0;font-size:20px}
+#info .rng{font-weight:600;margin-bottom:2px}
+#info h3{font-size:14px;margin:12px 0 4px}
+#info ul{margin:0;padding-left:18px}#info li{margin:5px 0}
+#info table{border-collapse:collapse;width:100%;font-size:12.5px}#info td,#info th{border-bottom:1px solid var(--line);padding:3px 4px;text-align:left;vertical-align:top}
+#info tr.pt{cursor:pointer}#info tr.pt:hover{background:var(--line)}
+#info .x{position:absolute;top:6px;right:6px;border:0;background:none;color:var(--ink);font-size:24px;cursor:pointer;padding:4px 8px}
+.hint{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);font-size:11.5px;color:var(--mute);text-align:right;pointer-events:none}
+body.open .hint{display:none}
+#lg{position:absolute;left:12px;top:calc(env(safe-area-inset-top,0px) + 124px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;line-height:1.75;pointer-events:none}#lg i{display:inline-block;vertical-align:middle;margin-right:6px}@media (max-width:640px){#lg{display:none}}
+@media (max-width:640px){.hint{display:none}#info{top:auto;height:46vh;left:12px;right:12px;width:auto}#panel{bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}body.open #panel{display:none}}
+</style></head><body>
+<canvas id="c" aria-label="Mô phỏng 3D các vùng biển Việt Nam"></canvas>
+<header><h1>Khám phá các vùng biển Việt Nam</h1><p>Mô phỏng 3D theo đường cơ sở 24 điểm · bấm vào từng vùng, nhãn hoặc chấm đỏ để xem ý chính</p></header>
+<div id="chips"></div>
+<div id="panel">
+<label><input type="checkbox" id="tLab" checked>Nhãn</label>
+<label><input type="checkbox" id="tWat" checked>Lớp nước</label>
+<label><input type="checkbox" id="tCl">Mây</label>
+<label><input type="checkbox" id="tRot">Tự xoay</label>
+<label>Tỉ lệ <select id="sMode"><option value="s">Minh họa</option><option value="r">Gần thực tế</option></select></label>
+</div>
+<div id="lg"><div><i style="width:24px;height:4px;background:#ff3b30"></i>Đường cơ sở (nối 24 điểm)</div><div><i style="width:12px;height:12px;border-radius:50%;background:#ff8a3d"></i>Điểm cơ sở</div><div><i style="width:24px;height:4px;background:#ffb100"></i>Biên giới quốc gia trên biển (12 hải lý)</div><div><i style="width:24px;height:0;border-top:3px dashed #8fd8ff"></i>Giới hạn 200 hải lý</div></div>
+<aside id="info" hidden><button class="x" aria-label="Đóng">×</button><h2></h2><div class="rng"></div><div class="bd"></div></aside>
+<div class="hint">Kéo để xoay · cuộn / chụm để phóng to · bỏ “Lớp nước” để thấy thềm lục địa</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+var dark=matchMedia('(prefers-color-scheme:dark)').matches;
+var cv=document.getElementById('c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));
+var S=new THREE.Scene();S.background=new THREE.Color(dark?0x08203a:0x1d4f85);
+var cam=new THREE.PerspectiveCamera(40,1,0.1,500);
+S.add(new THREE.HemisphereLight(0xffffff,0x6f8ea3,0.95));
+var dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(-15,40,25);S.add(dl);
+
+/* 24 điểm cơ sở: [ký hiệu, x ảnh, y ảnh, tên, vị trí] — theo thứ tự đường cơ sở từ Bắc xuống Nam */
+var B=[['A24',410,252,'Điểm số 1','Điểm phân định Vịnh Bắc Bộ giữa Việt Nam – Trung Quốc (2000)'],
+['A23',430,268,'Đảo Trà Cổ','Quảng Ninh'],['A22',460,294,'Hòn Bồ Cát','Quảng Ninh (trùng A21)'],['A21',462,317,'Hòn Bồ Cát','Quảng Ninh'],
+['A20',460,341,'Đảo Thanh Lam','Quảng Ninh (trùng A19)'],['A19',461,368,'Đảo Thanh Lam','Quảng Ninh'],
+['A18',465,396,'Đảo Hạ Mai','Quảng Ninh (trùng A17)'],['A17',466,422,'Đảo Hạ Mai','Quảng Ninh'],
+['A16',459,447,'Đảo Long Châu Đông','Hải Phòng'],['A15',376,536,'Đảo Hòn Mê','Thanh Hóa'],['A14',411,585,'Hòn Mắt Con','Nghệ An'],
+['A13',428,629,'Hòn Chim','Quảng Bình'],['A12',462,671,'Hòn Gió Lớn','Quảng Bình'],['A11',490,720,'Đảo Cồn Cỏ','Quảng Trị'],
+['A10',510,789,'Đảo Lý Sơn','Quảng Ngãi'],['A9',527,866,'Hòn Ông Căn','Bình Định'],['A8',526,949,'Mũi Đại Lãnh','Phú Yên'],
+['A7',509,1034,'Hòn Đôi','Khánh Hòa'],['A6',475,1110,'Hòn Hải','Nhóm đảo Phú Quý, Bình Thuận'],
+['A3',417,1241,'Hòn Tài Lớn','Côn Đảo, Bà Rịa – Vũng Tàu'],['A4',368,1287,'Hòn Bông Lan','Côn Đảo, Bà Rịa – Vũng Tàu'],
+['A5',342,1308,'Hòn Bảy Cạnh','Côn Đảo, Bà Rịa – Vũng Tàu'],['A2',151,1311,'Hòn Đá Lẻ','Đông Nam cụm đảo Hòn Khoai, Cà Mau'],
+['A1',55,1212,'Hòn Nhạn','Quần đảo Thổ Chu, Kiên Giang']];
+var LAND=[[410,252],[380,290],[340,340],[320,400],[330,470],[345,520],[375,560],[400,600],[430,650],[460,690],[485,740],[500,800],[512,880],[515,950],[500,1030],[450,1090],[410,1150],[370,1210],[310,1260],[240,1290],[150,1305],[170,1250],[190,1150],[215,1050],[260,960],[320,880],[350,800],[360,740],[330,690],[300,640],[260,560],[240,470],[190,390],[120,330],[90,250],[120,190],[200,150],[240,120],[330,140],[400,200]];
+function X(px){return (px-330)/40;}function Z(py){return (py-780)/40;}
+var curve=new THREE.CatmullRomCurve3(B.map(function(b){return new THREE.Vector3(X(b[1]),0,Z(b[2]));}),false,'centripetal');
+var N=280,SP=curve.getPoints(N),NR=[],i,j;
+for(i=0;i<=N;i++){var t=curve.getTangent(i/N);NR.push(new THREE.Vector3(t.z,0,-t.x));}
+NR=NR.map(function(n,k){var s=new THREE.Vector3();for(j=Math.max(0,k-8);j<=Math.min(N,k+8);j++)s.add(NR[j]);return s.normalize();});
+var DM={s:[0,1.1,2.2,5.2,7.6],r:[0,0.36,0.72,6,10.5]},mode='s',INW=1.3;
+function dd(k){return DM[mode][k];}
+function nmW(nm){var K=[0,12,24,200,350],q=0;while(q<3&&nm>K[q+1])q++;return dd(q)+(dd(q+1)-dd(q))*(nm-K[q])/(K[q+1]-K[q]);} /* 0=cơ sở,1=12,2=24,3=200,4=350 */
+
+var G=new THREE.Group();S.add(G);var ZN={},RO=0,PT=[],LB=[],WV=[],MV=[],CL=[],BD=[],FLG=null;
+var deep=new THREE.Mesh(new THREE.PlaneGeometry(1500,1500),new THREE.MeshBasicMaterial({color:dark?0x08203a:0x1d4f85}));deep.rotation.x=-Math.PI/2;deep.position.y=-1.9;S.add(deep);
+var SEA=new THREE.Mesh(new THREE.PlaneGeometry(1500,1500),new THREE.MeshLambertMaterial({color:0x2c8fd6,transparent:true,opacity:0.8,depthWrite:false}));SEA.rotation.x=-Math.PI/2;SEA.renderOrder=0;S.add(SEA);
+function M(c,op,ds){return new THREE.MeshLambertMaterial({color:c,transparent:op<1,opacity:op,side:THREE.DoubleSide,depthWrite:op>=1&&!ds});}
+function quads(a,b,ya,yb,Ws){Ws=Ws||1;var pos=[],idx=[],k,w,R1=Ws+1;for(k=0;k<=N;k++){var p=SP[k],n=NR[k];for(w=0;w<=Ws;w++){var f=w/Ws,d=a+(b-a)*f;pos.push(p.x+n.x*d,ya+(yb-ya)*f,p.z+n.z*d);}}
+for(k=0;k<N;k++)for(w=0;w<Ws;w++){var q=k*R1+w;idx.push(q,q+1,q+R1,q+1,q+R1+1,q+R1);}
+var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;}
+function zone(id,d0,d1,y,col,op,water,yb){var m=new THREE.Mesh(quads(d0,d1,y,yb===undefined?y:yb,water?8:6),M(col,op,water));m.userData={id:id};m.renderOrder=++RO;G.add(m);ZN[id]={m:m,op:op,water:water};if(water){m.userData.y0=y;WV.push(m);}return m;}
+function sail(row,d,sc,hull,white,sp){var g=ship(at(row,d,0),sc,hull,white);MV.push({g:g,d:d,row:row,sp:sp});}
+function edge(d,y,col){var pts=SP.map(function(p,k){return new THREE.Vector3(p.x+NR[k].x*d,y,p.z+NR[k].z*d);});G.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:col})));}
+function lab(t,u,col,bg,id){var c=document.createElement('canvas'),x=c.getContext('2d');x.font='700 34px "Be Vietnam Pro","Segoe UI",Arial';var w=Math.ceil(x.measureText(t).width)+32;c.width=w;c.height=60;x.font='700 34px "Be Vietnam Pro","Segoe UI",Arial';x.textAlign='center';x.textBaseline='middle';x.fillStyle=bg;x.beginPath();x.roundRect?x.roundRect(0,4,w,52,12):x.rect(0,4,w,52);x.fill();x.fillStyle=col;x.fillText(t,w/2,31);
+var s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false}));s.scale.set(w*u,60*u,1);s.renderOrder=50;if(id)s.userData={id:id};return s;}
+function at(k,d,y){k=Math.max(0,Math.min(N,k));return new THREE.Vector3(SP[k].x+NR[k].x*d,y,SP[k].z+NR[k].z*d);}
+function rowOf(py){var z=Z(py),b=0,bd=1e9;SP.forEach(function(p,k){var e=Math.abs(p.z-z);if(e<bd){bd=e;b=k;}});return b;}
+function ship(p,sc,hull,white){var g=new THREE.Group(),h=new THREE.Mesh(new THREE.BoxGeometry(1.3,0.22,0.46),new THREE.MeshLambertMaterial({color:hull}));g.add(h);
+if(white){var b=new THREE.Mesh(new THREE.BoxGeometry(.7,.3,.34),new THREE.MeshLambertMaterial({color:0xffffff}));b.position.set(0,.26,0);g.add(b);}
+else{[0xe4572e,0x2e86de,0xf2b134,0x3fb27f].forEach(function(c,q){var b=new THREE.Mesh(new THREE.BoxGeometry(.24,.2,.34),new THREE.MeshLambertMaterial({color:c}));b.position.set(-.45+q*.3,.2,0);g.add(b);});}
+g.position.copy(p);g.position.y=0.16;g.scale.setScalar(sc);g.rotation.y=-1.2;G.add(g);return g;}
+function rig(p){var g=new THREE.Group(),m=new THREE.MeshLambertMaterial({color:0x37506b});[[-.3,-.3],[.3,-.3],[-.3,.3],[.3,.3]].forEach(function(q){var c=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.2,8),m);c.position.set(q[0],.3,q[1]);g.add(c);});
+var d=new THREE.Mesh(new THREE.BoxGeometry(.9,.12,.9),new THREE.MeshLambertMaterial({color:0xd9553a}));d.position.y=.95;g.add(d);
+var f=new THREE.Mesh(new THREE.SphereGeometry(.1,8,8),new THREE.MeshBasicMaterial({color:0xffa31a}));f.position.set(0,1.6,0);g.add(f);var tw=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.6,6),m);tw.position.y=1.3;g.add(tw);
+g.position.copy(p);g.position.y=-1.15;g.scale.setScalar(1.3);G.add(g);}
+
+var i0=rowOf(866);
+function build(){
+while(G.children.length)G.remove(G.children[0]);ZN={};RO=0;PT=[];LB=[];WV=[];MV=[];CL=[];BD=[];FLG=null;
+/* thềm lục địa: đáy biển từ ngoài lãnh hải đến tối đa 350 hải lý */
+zone('them',dd(1),dd(4),-0.6,0xc7964a,1,false,-1.5);
+/* mặt nước */
+zone('noithuy',-INW,0,0.02,0x9fdcf5,0.85,true);
+zone('lanhhai',0,dd(1),0.04,0x38aef0,0.7,true);
+zone('eez',dd(1),dd(3),0.03,0x1f6fd0,0.55,true);
+zone('tiepgiap',dd(1),dd(2),0.06,0x7a63d0,0.6,true);
+var ow=new THREE.Mesh(quads(dd(3),dd(4),0.02,0.02,8),M(0x143f94,0.5,true));ow.renderOrder=1;ow.userData={y0:0.02};WV.push(ow);G.add(ow);
+[1,2,3,4].forEach(function(k){edge(dd(k),0.1,0xffe066);});
+/* đáy biển: vách cạnh ngoài */
+var wl=new THREE.Mesh(quads(dd(4),dd(4),0,-1.2),M(0x143f94,0.0,true));
+/* đường cơ sở: vách + dây */
+var wall=new THREE.Mesh(quads(0,0,0,1.3),M(0xe0262d,0.3,true));wall.userData={id:'coso'};wall.renderOrder=++RO;G.add(wall);ZN.coso={m:wall,op:0.3,water:false};
+var ln=new THREE.Mesh(quads(-0.07,0.07,0.55,0.55),new THREE.MeshBasicMaterial({color:0xe0262d,side:THREE.DoubleSide}));ln.userData={id:'coso'};G.add(ln);
+/* đất liền */
+function inP(px,py){var c=false;for(var a=0,b=LAND.length-1;a<LAND.length;b=a++){var P=LAND[a],Q=LAND[b];if((P[1]>py)!=(Q[1]>py)&&px<(Q[0]-P[0])*(py-P[1])/(Q[1]-P[1])+P[0])c=!c;}return c;}
+var HL=[[170,230,2.6,45],[135,310,1.8,55],[260,200,.9,45],[200,420,1.1,50],[240,520,1.5,45],[265,640,1.6,40],[300,740,1.4,45],[335,830,1.3,40],[345,900,1.5,40],[300,960,1.1,60],[270,1060,1,55],[250,1150,.6,50]];
+function hgt(px,py){var h=0;HL.forEach(function(m){h+=m[2]*Math.exp(-((px-m[0])*(px-m[0])+(py-m[1])*(py-m[1]))/(m[3]*m[3]));});return 0.5+h*(0.8+0.2*Math.sin(px*.09)*Math.cos(py*.07));}
+var seed=7;function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647;}
+var tg=new THREE.PlaneGeometry(560,1240,93,206);tg.rotateX(-Math.PI/2);var tp=tg.attributes.position,cl=[],cc=new THREE.Color();
+for(i=0;i<tp.count;i++){var px=tp.getX(i)+280,py=tp.getZ(i)+720,h,hex;if(inP(px,py)){h=hgt(px,py);hex=h<0.62?0x86c36a:h<1?0x5fa75a:h<1.5?0xb3a65a:h<2.1?0x9a7b55:0xc9b99a;}else{h=-1.6;hex=0xd9c690;}tp.setXYZ(i,X(px),h,Z(py));cc.setHex(hex);cl.push(cc.r,cc.g,cc.b);}
+tg.setAttribute('color',new THREE.Float32BufferAttribute(cl,3));tg.computeVertexNormals();G.add(new THREE.Mesh(tg,new THREE.MeshLambertMaterial({vertexColors:true})));
+var NB=[[0xe3cfae,'TRUNG QUỐC',230,60,[[-3000,-3000],[3000,-3000],[3000,235],[700,240],[410,252]].concat(LAND.slice(34).reverse(),[[-3000,250]])],
+[0xcfe3a6,'LÀO',90,520,LAND.slice(25,35).reverse().concat([[180,900],[110,780],[60,600],[40,420],[40,250]])],
+[0xefdca0,'CAMPUCHIA',110,1150,LAND.slice(20,26).reverse().concat([[70,1305],[70,960],[180,900]])],
+[0xdcc9e6,'THÁI LAN',-300,800,[[-3000,250],[40,250],[40,420],[60,600],[110,780],[180,900],[70,960],[70,1305],[-3000,1305]]]];
+NB.forEach(function(n){var sp=new THREE.Shape();n[4].forEach(function(p,k){var x=X(p[0]),y=-Z(p[1]);k?sp.lineTo(x,y):sp.moveTo(x,y);});var m=new THREE.Mesh(new THREE.ExtrudeGeometry(sp,{depth:0.3,bevelEnabled:false}),new THREE.MeshLambertMaterial({color:n[0]}));m.rotation.x=-Math.PI/2;G.add(m);
+var l=lab(n[1],0.02,'#5a4a30','rgba(255,255,255,.75)');l.position.set(X(n[2]),0.9,Z(n[3]));G.add(l);LB.push(l);});
+function lineY(arr,off){var P=[];for(var a=0;a<arr.length-1;a++){var A=arr[a],Q=arr[a+1],c=Math.max(1,Math.round(Math.hypot(Q[0]-A[0],Q[1]-A[1])/10));for(var s=0;s<c;s++){var px=A[0]+(Q[0]-A[0])*s/c,py=A[1]+(Q[1]-A[1])*s/c;P.push(new THREE.Vector3(X(px),Math.max(.5,hgt(px,py))+off,Z(py)));}}var e=arr[arr.length-1];P.push(new THREE.Vector3(X(e[0]),Math.max(.5,hgt(e[0],e[1]))+off,Z(e[1])));return P;}
+function tube(P,r,col){G.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P),P.length*2,r,6,false),new THREE.MeshBasicMaterial({color:col})));}
+var BP=lineY(LAND.slice(20).concat([LAND[0]]),0.08);tube(BP,0.13,0xffd23f);tube(lineY(LAND.slice(20).concat([LAND[0]]),0.1),0.075,0xd7191f);tube(lineY(LAND.slice(0,21),0.04),0.045,0xffffff);
+var bl1=lab('Biên giới quốc gia',0.011,'#fff','rgba(215,25,31,.9)');bl1.position.set(X(150),2.2,Z(430));G.add(bl1);LB.push(bl1);
+var fc=document.createElement('canvas');fc.width=96;fc.height=64;var fx=fc.getContext('2d');fx.fillStyle='#da251d';fx.fillRect(0,0,96,64);fx.fillStyle='#ffff00';fx.beginPath();for(var s2=0;s2<10;s2++){var an=-Math.PI/2+s2*Math.PI/5,rr=s2%2?7:17;fx[s2?'lineTo':'moveTo'](48+rr*Math.cos(an),32+rr*Math.sin(an));}fx.closePath();fx.fill();
+FLG=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.8,12,6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(fc),side:THREE.DoubleSide}));
+var hn=new THREE.Vector3(X(300),hgt(300,320),Z(320)),pl=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,2.4,6),new THREE.MeshLambertMaterial({color:0xdddddd}));pl.position.set(hn.x,hn.y+1.2,hn.z);G.add(pl);FLG.position.set(hn.x+.62,hn.y+2,hn.z);G.add(FLG);
+var hl=lab('Hà Nội',0.011,'#fff','rgba(215,25,31,.9)');hl.position.set(hn.x,hn.y+2.9,hn.z);G.add(hl);LB.push(hl);
+var tr=new THREE.InstancedMesh(new THREE.ConeGeometry(.11,.38,6),new THREE.MeshLambertMaterial({color:0x2f7d3a}),420),tn=0,dm=new THREE.Object3D();
+while(tn<420){var qx=60+rnd()*470,qy=140+rnd()*1150;if(!inP(qx,qy))continue;var qh=hgt(qx,qy);if(qh>1.7)continue;dm.position.set(X(qx),qh+.17,Z(qy));dm.scale.setScalar(.7+rnd()*.7);dm.updateMatrix();tr.setMatrixAt(tn++,dm.matrix);}G.add(tr);
+B.forEach(function(b){if(/^(Mũi|Điểm)/.test(b[3]))return;var is=new THREE.Mesh(new THREE.SphereGeometry(.42,12,8),new THREE.MeshLambertMaterial({color:0x5fa75a}));is.scale.y=.6;is.position.set(X(b[1]),0.02,Z(b[2]));G.add(is);});
+[['Dãy Hoàng Liên Sơn',170,230,3.4],['Dãy Trường Sơn',265,640,2.5],['Tây Nguyên',300,960,1.9],['ĐB sông Hồng',300,300,1.1],['ĐB sông Cửu Long',230,1255,1.1]].forEach(function(r){var l=lab(r[0],0.012,'#fff','rgba(70,55,30,.85)');l.position.set(X(r[1]),r[3],Z(r[2]));G.add(l);LB.push(l);});
+var bd=lab('BIỂN ĐÔNG (biển cả)',0.022,'#fff','rgba(16,48,74,.8)','bien');bd.position.copy(at(i0-90,dd(4)+1.6,0.8));G.add(bd);LB.push(bd);
+for(var q=0;q<7;q++){var cg=new THREE.Group();for(var u=0;u<4;u++){var cs=new THREE.Mesh(new THREE.SphereGeometry(.7+rnd()*.5,10,8),new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:0.6,depthWrite:false}));cs.position.set(u*.8,rnd()*.3,rnd()*.5);cs.scale.y=.55;cg.add(cs);}cg.position.set(-8+rnd()*28,6.5+rnd()*1.5,-12+rnd()*24);cg.userData.sp=.003+rnd()*.004;G.add(cg);CL.push(cg);}
+for(var q2=0;q2<8;q2++){var bg=new THREE.Group(),wm=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}),g1=new THREE.PlaneGeometry(.36,.14),g2=new THREE.PlaneGeometry(.36,.14);g1.translate(-.18,0,0);g2.translate(.18,0,0);var w1=new THREE.Mesh(g1,wm),w2=new THREE.Mesh(g2,wm),bo=new THREE.Mesh(new THREE.SphereGeometry(.06,6,6),wm);bg.add(w1,w2,bo);G.add(bg);BD.push({g:bg,w1:w1,w2:w2,c:at(Math.min(N-3,Math.max(3,i0-100+q2*22)),dd(1)*0.5+rnd()*5,2),r:.8+rnd(),sp:.0008+rnd()*.0006,ph:rnd()*6});}
+var vn=lab('VIỆT NAM',0.016,'#fff','#d3262d');vn.position.set(-2.8,3,-3);G.add(vn);LB.push(vn);
+/* 24 điểm */
+B.forEach(function(b,k){var s=new THREE.Mesh(new THREE.SphereGeometry(0.3,14,14),new THREE.MeshLambertMaterial({color:0xff8a3d,emissive:0x802000}));
+var p=new THREE.Vector3(X(b[1]),0.58,Z(b[2]));s.position.copy(p);s.userData={pt:k};G.add(s);PT.push(s);
+var l=lab(b[0],0.011,'#fff','rgba(150,10,20,.9)');l.position.set(p.x-0.55,0.95,p.z);l.userData={pt:k};G.add(l);LB.push(l);});
+/* thước đo + nhãn vùng */
+var A=at(i0,0,0.7),Bq=at(i0,dd(4),0.7);G.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([A,Bq]),new THREE.LineBasicMaterial({color:0x10304a})));
+[[1,'12 hải lý',1.2],[2,'24 hải lý',1.9],[3,'200 hải lý',1.2],[4,'350 hải lý',1.2]].forEach(function(r){var p=at(i0,dd(r[0]),0.7);var s=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8),new THREE.MeshBasicMaterial({color:0x10304a}));s.position.copy(p);G.add(s);
+var l=lab(r[1],0.011,'#10304a','rgba(255,255,255,.92)');l.position.copy(p);l.position.y=r[2]+0.2;G.add(l);LB.push(l);});
+[['coso',0,-48,'#e0262d','Đường cơ sở',1.5],['noithuy',-INW/2,-36,'#4aa3c8','Nội thủy',1.2],['lanhhai',dd(1)/2,-24,'#2a8fd8','Lãnh hải',1.2],['tiepgiap',(dd(1)+dd(2))/2,-12,'#7a63d0','Vùng tiếp giáp lãnh hải',1.2],
+['eez',(dd(2)+dd(3))/2,26,'#1f5fc0','Vùng đặc quyền kinh tế',1.2],['them',(dd(3)+dd(4))/2,46,'#a87420','Thềm lục địa',-0.9]].forEach(function(z){
+var l=lab(z[4],0.014,'#fff',z[3],z[0]);l.position.copy(at(i0+z[2],z[1],z[5]));G.add(l);LB.push(l);});
+/* trang trí */
+sail(i0-62,dd(1)*0.5,0.5,0xe9eef3,true,0.12);sail(i0+8,(dd(2)+dd(3))/2+0.3,1,0x555d66,false,-0.08);sail(i0+95,(dd(2)+dd(3))/2-0.6,0.8,0x2e4a66,false,0.06);sail(i0-120,dd(1)*0.6,0.4,0xe9eef3,true,-0.1);rig(at(i0-20,(dd(3)+dd(4))/2,0));rig(at(i0+60,(dd(3)+dd(4))/2+0.5,0));
+/* ===== bổ sung: đường cơ sở rõ, biên giới trên biển, quần đảo, nước láng giềng ===== */
+var V3=THREE.Vector3;
+function LL(a,o){return [509+77.8*(o-109.47),1034-69.5*(a-12.65)];}
+function pip(P,x,y){var c=false;for(var a=0,b=P.length-1;a<P.length;b=a++){if((P[a][1]>y)!=(P[b][1]>y)&&x<(P[b][0]-P[a][0])*(y-P[a][1])/(P[b][1]-P[a][1])+P[a][0])c=!c;}return c;}
+function seg(a,b,r,col,id){var d=b.clone().sub(a),len=d.length(),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,8),new THREE.MeshBasicMaterial({color:col}));m.position.copy(a).add(b).multiplyScalar(0.5);m.quaternion.setFromUnitVectors(new V3(0,1,0),d.normalize());if(id)m.userData={id:id};G.add(m);}
+var bp=B.map(function(b){return new V3(X(b[1]),0.6,Z(b[2]));});
+for(var jj=0;jj<bp.length-1;jj++)seg(bp[jj],bp[jj+1],0.1,0xff3b30,'coso');
+function ring(d,y,r,col,id){var P=[];for(var kk=0;kk<=N;kk+=3)P.push(at(kk,d,y));var m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P),P.length*2,r,6,false),new THREE.MeshBasicMaterial({color:col}));if(id)m.userData={id:id};G.add(m);}
+ring(dd(1),0.35,0.09,0xffb100,'lanhhai');
+var dp=[];for(var k2=0;k2<=N;k2+=2)dp.push(at(k2,dd(3),0.2));var dl2=new THREE.Line(new THREE.BufferGeometry().setFromPoints(dp),new THREE.LineDashedMaterial({color:0x8fd8ff,dashSize:0.35,gapSize:0.22}));dl2.computeLineDistances();G.add(dl2);
+[['BIÊN GIỚI QUỐC GIA TRÊN BIỂN','rgba(199,120,0,.95)','#fff','lanhhai',at(i0-80,dd(1),1.1)],['ĐƯỜNG CƠ SỞ','rgba(215,25,31,.95)','#fff','coso',at(i0-100,0,1.5)],['Giới hạn 200 hải lý','rgba(143,216,255,.92)','#0b3a66',null,at(i0+75,dd(3),0.9)],['661.591 km²','rgba(16,48,74,.78)','#fff',null,at(rowOf(900),nmW(100),0.9)],['67.203 km²','rgba(16,48,74,.78)','#fff',null,new V3(X(385),0.9,Z(430))]].forEach(function(r){var l=lab(r[0],0.014,r[2],r[1],r[3]);l.position.copy(r[4]);G.add(l);LB.push(l);});
+function arch(id,name,area,poly){var P=poly.map(function(q){return LL(q[0],q[1]);}),sh=new THREE.Shape(),cx=0,cy=0,x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+P.forEach(function(p,k){var x=X(p[0]),y=-Z(p[1]);k?sh.lineTo(x,y):sh.moveTo(x,y);cx+=p[0]/P.length;cy+=p[1]/P.length;x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);});
+var m=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshBasicMaterial({color:0x29b6f6,transparent:true,opacity:0.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=0.3;m.renderOrder=30;m.userData={id:id};G.add(m);ZN[id]={m:m,op:0.28,water:false};
+var Vs=P.map(function(p){return new V3(X(p[0]),0.32,Z(p[1]));});tube(Vs.concat([Vs[0]]),0.05,0x29b6f6);
+Vs.forEach(function(v){var o=new THREE.Mesh(new THREE.SphereGeometry(0.26,12,12),new THREE.MeshBasicMaterial({color:0xff8a3d}));o.position.copy(v);o.userData={id:id};G.add(o);});
+var n=0,tries=0;while(n<28&&tries++<500){var qx=x0+rnd()*(x1-x0),qy=y0+rnd()*(y1-y0);if(!pip(P,qx,qy))continue;var is=new THREE.Mesh(new THREE.SphereGeometry(0.06+rnd()*0.06,6,6),new THREE.MeshLambertMaterial({color:0xe8d9a8}));is.position.set(X(qx),0.34,Z(qy));is.userData={id:id};G.add(is);n++;}
+var l1=lab(name,0.015,'#fff','rgba(10,90,150,.9)',id);l1.position.set(X(cx),1.3,Z(cy)-0.9);G.add(l1);LB.push(l1);var l2=lab(area,0.015,'#fff','rgba(16,48,74,.8)',id);l2.position.set(X(cx),0.8,Z(cy)+0.6);G.add(l2);LB.push(l2);}
+arch('hoangsa','Quần đảo HOÀNG SA','30.680 km²',[[17.15,111.2],[17.1,112.4],[16.75,112.95],[15.95,112.75],[15.8,111.3]]);
+arch('truongsa','Quần đảo TRƯỜNG SA','250.800 km²',[[11.78,114.4],[11.9,116.6],[11.37,117.5],[10.7,117.6],[9.45,116.5],[7.5,113.55],[8.98,111.4]]);
+var tc=LL(8.1,109.8),tcm=new THREE.Mesh(new THREE.SphereGeometry(0.5,14,8),new THREE.MeshLambertMaterial({color:0xb8892f}));tcm.scale.set(1.6,0.3,0.9);tcm.position.set(X(tc[0]),0.1,Z(tc[1]));tcm.userData={id:'tuchinh'};G.add(tcm);
+var tcl=lab('Bãi Tư Chính',0.013,'#fff','rgba(150,100,20,.92)','tuchinh');tcl.position.set(X(tc[0]),0.9,Z(tc[1])+0.4);G.add(tcl);LB.push(tcl);
+var N2=[[0xe3cfae,'HẢI NAM (TRUNG QUỐC)',[[560,470],[660,440],[720,500],[700,580],[620,610],[560,560]]],
+[0xf0d9d9,'PHI-LIP-PIN',[[11.3,119.4],[11.0,119.7],[9.6,118.5],[8.4,117.3],[8.7,117.0],[9.9,117.9]].map(function(q){return LL(q[0],q[1]);})],
+[0xe9d8b4,'BRU-NÂY – MA-LAI-XI-A',[[7.0,116.8],[5.8,117.7],[4.8,115.3],[4.0,113.8],[3.0,112.8],[1.9,111.0],[1.6,109.7],[-3,109],[-3,119.5],[2,119.5],[4.2,118.2]].map(function(q){return LL(q[0],q[1]);})],
+[0xd4e3c0,'MA-LAI-XI-A',[[8.6,100.0],[7.0,100.5],[6.3,102.0],[5.8,103.0],[4.5,103.4],[2.5,103.9],[1.4,104.2],[1.3,103.5],[1.5,101.0],[4.0,99.0],[8.6,98.5]].map(function(q){return LL(q[0],q[1]);})]];
+N2.forEach(function(n){var sp=new THREE.Shape(),ax=0,ay=0;n[2].forEach(function(p,k){var x=X(p[0]),y=-Z(p[1]);k?sp.lineTo(x,y):sp.moveTo(x,y);ax+=p[0]/n[2].length;ay+=p[1]/n[2].length;});var m=new THREE.Mesh(new THREE.ExtrudeGeometry(sp,{depth:0.3,bevelEnabled:false}),new THREE.MeshLambertMaterial({color:n[0]}));m.rotation.x=-Math.PI/2;G.add(m);var l=lab(n[1],0.02,'#5a4a30','rgba(255,255,255,.75)');l.position.set(X(ax),0.9,Z(ay));G.add(l);LB.push(l);});
+}
+build();
+
+/* ===== nội dung ===== */
+var D={
+coso:{t:'Đường cơ sở',c:'#e0262d',x:0,r:'Mốc để tính chiều rộng lãnh hải và các vùng biển khác',m:[
+'Là ranh giới để tính chiều rộng các vùng biển: lãnh hải, vùng tiếp giáp, vùng đặc quyền kinh tế, thềm lục địa.',
+'Việt Nam dùng đường cơ sở thẳng: nối các điểm mốc ven bờ và hải đảo bằng những đoạn thẳng.',
+'Sơ đồ tổng quát ghi đường nối từ Mũi Nai (Hà Tiên) đến đảo Cồn Cỏ (Quảng Trị); bản đồ chi tiết có 24 điểm A1–A24. Bấm chấm đỏ để xem từng điểm.'],
+e:['Phía trong đường cơ sở là nội thủy; phía ngoài là lãnh hải.','Chiều rộng mọi vùng biển đều đo từ đường này ra phía biển.']},
+noithuy:{t:'Nội thủy',c:'#4aa3c8',r:'Vùng nước phía trong đường cơ sở',m:[
+'Là một phần lãnh thổ của Việt Nam trên biển.','Việt Nam có chủ quyền tuyệt đối như trên đất liền.','Tàu thuyền nước ngoài phải xin phép mới được vào.'],
+e:['Gồm cảng biển, cửa sông, vịnh và vùng nước giữa bờ với đường cơ sở.','Việt Nam có quyền tài phán toàn diện đối với tàu thuyền nước ngoài ở đây.']},
+lanhhai:{t:'Lãnh hải',c:'#2a8fd8',r:'Rộng 12 hải lý tính từ đường cơ sở',m:[
+'Việt Nam có chủ quyền đối với vùng nước, vùng trời, đáy biển và lòng đất dưới đáy biển của lãnh hải.','Tàu thuyền nước ngoài có quyền đi qua không gây hại theo quy định.'],
+e:['Ranh giới ngoài của lãnh hải là biên giới quốc gia trên biển.','Đi qua không gây hại: đi nhanh chóng, liên tục, không phương hại hòa bình, trật tự, an ninh.','Chủ quyền về chính trị, kinh tế, an ninh và môi trường.']},
+tiepgiap:{t:'Vùng tiếp giáp lãnh hải',c:'#7a63d0',r:'Rộng 12 hải lý tính từ ranh giới ngoài lãnh hải; mép ngoài ở mốc 24 hải lý từ đường cơ sở',m:[
+'Việt Nam có quyền kiểm soát để ngăn chặn các hành vi vi phạm pháp luật về hải quan, thuế quan, nhập cư, y tế.'],
+e:['Đây là quyền kiểm soát, không phải chủ quyền lãnh thổ.','Các nước vẫn có tự do hàng hải, hàng không, đặt cáp và ống dẫn ngầm.']},
+eez:{t:'Vùng đặc quyền kinh tế',c:'#1f5fc0',r:'Nằm ngoài lãnh hải; tính cả lãnh hải, mép ngoài là 200 hải lý từ đường cơ sở',m:[
+'Quyền chủ quyền: khai thác tài nguyên (hải sản, dầu khí…).','Quyền tài phán: bảo vệ môi trường biển, nghiên cứu khoa học biển.','Các nước khác được tự do hàng hải, bay qua, đặt ống dẫn dầu… nếu không ảnh hưởng đến quyền lợi của Việt Nam.'],
+e:['Riêng vùng đặc quyền kinh tế rộng tối đa 188 hải lý tính từ ranh giới ngoài lãnh hải.']},
+them:{t:'Thềm lục địa',c:'#a87420',r:'Đáy biển và lòng đất dưới đáy biển, bắt đầu từ phía ngoài lãnh hải; tối thiểu 200, tối đa 350 hải lý',m:[
+'Việt Nam có quyền chủ quyền về thăm dò, khai thác tài nguyên thiên nhiên dưới đáy biển (dầu khí, khoáng sản…).','Các nước khác không được đặt thiết bị, nghiên cứu khoa học… nếu không được Việt Nam đồng ý.'],
+e:['Chỉ gồm đáy biển và lòng đất, không gồm vùng nước phía trên.','Bỏ chọn “Lớp nước” để nhìn rõ đáy biển.']}};
+D.coso.n='UNCLOS Điều 5, 7 · Luật Biển Việt Nam 2012 Điều 8';D.coso.s=[['Khái niệm',['Đường cơ sở là đường gốc dùng để tính chiều rộng lãnh hải và các vùng biển khác của quốc gia ven biển.','Có hai loại: đường cơ sở thông thường (theo ngấn nước thủy triều thấp nhất dọc bờ) và đường cơ sở thẳng (nơi bờ biển khúc khuỷu hoặc có chuỗi đảo ven bờ).']],['Với Việt Nam',['Việt Nam dùng đường cơ sở thẳng, nối các điểm mốc trên đất liền và hải đảo bằng những đoạn thẳng.','Sơ đồ 24 điểm A1–A24 bắt đầu từ Hòn Nhạn (Thổ Chu), qua Hòn Đá Lẻ, Côn Đảo, Phú Quý, Lý Sơn, Cồn Cỏ… đến Điểm số 1 ở Vịnh Bắc Bộ.']],['Ý nghĩa',['Vùng nước phía trong đường cơ sở là nội thủy; vùng nước phía ngoài, đo từ đường này, là lãnh hải, tiếp giáp, đặc quyền kinh tế và thềm lục địa.']]];
+D.noithuy.n='UNCLOS Điều 8 · Luật Biển Việt Nam 2012 Điều 9';D.noithuy.s=[['Khái niệm và phạm vi',['Vùng nước tiếp giáp với bờ biển, nằm bên trong đường cơ sở và là bộ phận lãnh thổ của quốc gia.','Gồm vùng nước cảng biển, vũng tàu, cửa sông, vịnh và vùng nước giữa bờ biển với đường cơ sở.']],['Chế độ pháp lý và quyền',['Chủ quyền hoàn toàn, tuyệt đối và đầy đủ đối với vùng nước, đáy biển, lòng đất dưới đáy biển và vùng trời phía trên, tương tự đất liền.','Tàu thuyền, phương tiện bay nước ngoài muốn ra vào, hoạt động phải xin phép trước và tuân thủ pháp luật của quốc gia ven biển.','Toàn quyền tài phán với vi phạm trên tàu nước ngoài; tàu quân sự và tàu nhà nước phi thương mại được miễn trừ tư pháp nhưng vẫn phải tuân thủ quy định ra vào, hoạt động.']],['Nghĩa vụ',['Công bố công khai quy định, thủ tục ra vào cảng biển và nội thủy.','Bảo đảm an toàn hàng hải, duy tu luồng lạch, tìm kiếm cứu nạn và bảo vệ môi trường biển.']]];
+D.lanhhai.n='UNCLOS Điều 2, 3 · Luật Biển Việt Nam 2012 Điều 11, 12';D.lanhhai.s=[['Khái niệm và phạm vi',['Vùng biển rộng không vượt quá 12 hải lý (1 hải lý = 1.852 m) tính từ đường cơ sở ra phía biển.','Ranh giới phía ngoài của lãnh hải là biên giới quốc gia trên biển.']],['Chế độ pháp lý và quyền',['Chủ quyền đầy đủ và toàn vẹn đối với lãnh hải, vùng trời, đáy biển và lòng đất dưới đáy biển.','Ban hành luật lệ và kiểm soát: an toàn hàng hải, bảo vệ cáp ngầm, bảo tồn tài nguyên sinh vật, nghiên cứu khoa học, bảo vệ môi trường, phòng chống buôn lậu và nhập cư trái phép.']],['Nghĩa vụ: quyền đi qua không gây hại',['Phải tôn trọng quyền đi qua không gây hại của tàu thuyền nước ngoài: đi nhanh chóng, liên tục, không dừng hay thả neo (trừ sự cố bất khả kháng) và không phương hại hòa bình, trật tự, an ninh.','Tàu ngầm và phương tiện đi ngầm khác phải đi nổi và treo cờ quốc tịch.','Theo Luật Biển Việt Nam, tàu quân sự nước ngoài phải thông báo trước cho cơ quan có thẩm quyền.','Không được cản trở việc đi qua không gây hại và phải thông báo mọi nguy hiểm hàng hải đã biết.','Lưu ý: vùng trời trên lãnh hải thuộc chủ quyền tuyệt đối, phương tiện bay nước ngoài chưa được phép thì không có quyền bay qua.']]];
+D.tiepgiap.n='UNCLOS Điều 33 · Luật Biển Việt Nam 2012 Điều 13, 14';D.tiepgiap.s=[['Khái niệm và phạm vi',['Vùng biển tiếp liền và nằm ngoài lãnh hải, rộng không quá 12 hải lý tính từ ranh giới ngoài lãnh hải (tối đa 24 hải lý từ đường cơ sở).']],['Chế độ pháp lý và quyền',['Không có chủ quyền lãnh thổ; quốc gia thực hiện quyền kiểm soát cần thiết.','Ngăn ngừa và trừng trị vi phạm về hải quan, thuế khóa, y tế và nhập cư xảy ra trên lãnh thổ hoặc trong lãnh hải.','Theo Luật Biển Việt Nam, còn kiểm soát các vi phạm về an ninh, quốc phòng và bảo vệ hiện vật khảo cổ, lịch sử.']],['Nghĩa vụ',['Tôn trọng quyền tự do hàng hải, tự do hàng không, tự do đặt cáp và ống dẫn ngầm của các quốc gia khác, vì về pháp lý vùng này chồng lên phần bên trong của vùng đặc quyền kinh tế.']]];
+D.eez.n='UNCLOS Điều 55, 57 · Luật Biển Việt Nam 2012 Điều 15';D.eez.s=[['Khái niệm và phạm vi',['Vùng biển tiếp liền và nằm ngoài lãnh hải, hợp với lãnh hải thành vùng rộng tối đa 200 hải lý tính từ đường cơ sở.','Bản thân vùng đặc quyền kinh tế rộng tối đa 188 hải lý tính từ ranh giới ngoài lãnh hải.']],['Chế độ pháp lý và quyền',['Quyền chủ quyền về kinh tế: thăm dò, khai thác, quản lý và bảo tồn tài nguyên sinh vật (hải sản) và không sinh vật (khoáng sản, năng lượng nước, hải lưu, gió).','Quyền tài phán chuyên biệt: đảo nhân tạo, thiết bị và công trình trên biển; nghiên cứu khoa học biển; bảo vệ và gìn giữ môi trường biển.','Quyền thực thi pháp luật: khám xét, kiểm tra, bắt giữ và khởi tố tư pháp tàu nước ngoài đánh bắt hải sản hoặc khai thác tài nguyên trái phép.']],['Nghĩa vụ',['Tôn trọng tự do hàng hải, hàng không, đặt cáp và ống dẫn ngầm của mọi quốc gia, kể cả quốc gia không có biển.','Quản lý, bảo tồn nguồn lợi sinh vật biển, tránh khai thác quá mức.','Nếu không khai thác hết sản lượng cho phép, cần xem xét cho quốc gia khác khai thác phần dư thông qua điều ước quốc tế.']]];
+D.them.n='UNCLOS Điều 76 · Luật Biển Việt Nam 2012 Điều 17';D.them.s=[['Khái niệm và phạm vi',['Gồm đáy biển và lòng đất dưới đáy biển bên ngoài lãnh hải, trên toàn bộ phần kéo dài tự nhiên của lãnh thổ đất liền đến bờ ngoài của rìa lục địa, hoặc đến cách đường cơ sở 200 hải lý nếu rìa lục địa ở gần hơn.','Nếu rìa lục địa kéo dài tự nhiên vượt 200 hải lý, có thể mở rộng nhưng không quá 350 hải lý từ đường cơ sở, hoặc không quá 100 hải lý từ đường đẳng sâu 2.500 m.','Chỉ gồm đáy biển và lòng đất, không gồm vùng nước bên trên.']],['Chế độ pháp lý và quyền',['Quyền chủ quyền về thăm dò và khai thác tài nguyên thiên nhiên.','Quyền có tính đặc quyền và đương nhiên: nếu quốc gia không thăm dò hay khai thác thì không ai được làm nếu chưa có sự đồng ý rõ ràng; không phụ thuộc chiếm hữu thực sự hay danh nghĩa, cũng không cần tuyên bố.','Tài nguyên gồm khoáng sản (dầu mỏ, khí đốt, kim loại…) và sinh vật loài định cư (san hô, trai, bào ngư…).','Có quyền tài phán đối với đảo nhân tạo và công trình trên thềm lục địa.']],['Nghĩa vụ',['Không được đụng chạm đến chế độ pháp lý của vùng nước hoặc vùng trời phía trên (vùng đặc quyền kinh tế hoặc biển cả).','Không cản trở vô lý việc hàng hải, đánh bắt cá, đặt và bảo dưỡng cáp, ống dẫn ngầm của quốc gia khác; tuyến ống dẫn ngầm phải được quốc gia ven biển thỏa thuận.','Với phần mở rộng vượt 200 hải lý: đóng góp bằng tiền hoặc hiện vật cho cộng đồng quốc tế thông qua Cơ quan Quyền lực Đáy đại dương (ISA) từ năm thứ 6 sau khi bắt đầu khai thác tài nguyên không sinh vật.']]];
+D.bien={t:'Biển cả',c:'#7b8a97',r:'Ngoài các vùng biển thuộc quyền tài phán quốc gia',n:'Kiến thức bổ sung',m:['Là vùng biển nằm ngoài vùng đặc quyền kinh tế, thuộc cộng đồng quốc tế; không quốc gia nào được đặt chủ quyền.','Mọi quốc gia đều có quyền tự do hàng hải, hàng không, đặt cáp và ống dẫn ngầm.'],s:[]};
+D.lanhhai.m.unshift('Đường vàng cam trên mô hình là biên giới quốc gia trên biển: ranh giới ngoài của lãnh hải, cách đường cơ sở 12 hải lý.');D.coso.m.unshift('Đường đỏ nối các chấm cam là đường cơ sở, ranh giới rất quan trọng: từ đây tính chiều rộng mọi vùng biển.');
+D.hoangsa={t:'Quần đảo Hoàng Sa',c:'#29b6f6',r:'Ngoài khơi miền Trung, thuộc thành phố Đà Nẵng',n:'Theo sơ đồ minh họa',m:['Vùng biển quần đảo theo sơ đồ: 30.680 km².','Việt Nam khẳng định có đầy đủ bằng chứng lịch sử và cơ sở pháp lý về chủ quyền đối với quần đảo Hoàng Sa.','Các chấm cam là điểm mốc, đường xanh bao quanh quần đảo trên sơ đồ.'],s:[]};
+D.truongsa={t:'Quần đảo Trường Sa',c:'#29b6f6',r:'Ngoài khơi Đông Nam, thuộc tỉnh Khánh Hòa',n:'Theo sơ đồ minh họa',m:['Vùng biển quần đảo theo sơ đồ: 250.800 km².','Việt Nam khẳng định có đầy đủ bằng chứng lịch sử và cơ sở pháp lý về chủ quyền đối với quần đảo Trường Sa.','Quần đảo gồm rất nhiều đảo, đá, bãi san hô nhỏ rải trong vùng biển rộng; các chấm trắng nhỏ trên mô hình là minh họa.'],s:[]};
+D.tuchinh={t:'Bãi Tư Chính',c:'#b8892f',r:'Phía Đông Nam Vũng Tàu, dưới đáy biển',n:'Theo sơ đồ minh họa',m:['Là bãi ngầm nằm trong vùng đặc quyền kinh tế và thềm lục địa của Việt Nam.','Khu vực có tiềm năng dầu khí; Việt Nam có quyền chủ quyền về thăm dò, khai thác tài nguyên ở đây.'],s:[]};
+var ORD=['coso','noithuy','lanhhai','tiepgiap','eez','them','bien','hoangsa','truongsa','tuchinh'];
+var info=document.getElementById('info'),chips=document.getElementById('chips'),sel=null,selPt=-1;
+function li(a){return '<ul>'+a.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
+function mark(){[].forEach.call(chips.children,function(b){b.classList.toggle('on',b.dataset.id===sel);});}
+function open(c,h,r,body){info.hidden=false;document.body.classList.add('open');info.style.setProperty('--ac',c);info.querySelector('h2').textContent=h;var e=info.querySelector('.rng');e.textContent=r;e.style.color=c;info.querySelector('.bd').innerHTML=body;info.scrollTop=0;}
+function pick(id){var d=D[id];sel=id;selPt=-1;open(d.c,d.t,d.r,(d.n?'<div style="font-size:12px;color:var(--mute)">'+d.n+'</div>':'')+'<h3>Ý chính khi bấm</h3>'+li(d.m)+(d.s||[]).map(function(s){return '<h3>'+s[0]+'</h3>'+li(s[1]);}).join(''));
+if(id==='them')document.getElementById('tWat').checked=false;mark();}
+function pickPt(k){var b=B[k];sel='pts';selPt=k;open('#e0262d',b[0]+' – '+b[3],b[4],'<p>Một trong 24 điểm nối thành đường cơ sở của Việt Nam. Các điểm được nối bằng đoạn thẳng; vùng nước phía trong là nội thủy.</p>');mark();}
+function pickList(){sel='pts';selPt=-1;var rows=B.slice().sort(function(a,b){return a[0].slice(1)-b[0].slice(1);}).map(function(b){var k=B.indexOf(b);return '<tr class="pt" data-k="'+k+'"><td><b>'+b[0]+'</b></td><td>'+b[3]+'</td><td>'+b[4]+'</td></tr>';}).join('');
+open('#e0262d','24 điểm nối đường cơ sở','Bấm một dòng để xem điểm đó trên mô hình','<table><tr><th>Ký hiệu</th><th>Tên mốc</th><th>Vị trí</th></tr>'+rows+'</table>');
+[].forEach.call(info.querySelectorAll('tr.pt'),function(r){r.onclick=function(){pickPt(+r.dataset.k);};});mark();}
+info.querySelector('.x').onclick=function(){sel=null;selPt=-1;info.hidden=true;document.body.classList.remove('open');mark();};
+ORD.forEach(function(id){var b=document.createElement('button');b.textContent=D[id].t;b.dataset.id=id;b.style.setProperty('--ac',D[id].c);b.onclick=function(){pick(id);};chips.appendChild(b);});
+var pb=document.createElement('button');pb.textContent='24 điểm cơ sở';pb.dataset.id='pts';pb.style.setProperty('--ac','#e0262d');pb.onclick=pickList;chips.appendChild(pb);
+
+/* điều khiển */
+var rot=false,showLab=true,showWat=true,showCl=false;document.getElementById('tCl').onchange=function(e){showCl=e.target.checked;};
+document.getElementById('tLab').onchange=function(e){showLab=e.target.checked;};
+document.getElementById('tWat').onchange=function(e){showWat=e.target.checked;};
+document.getElementById('tRot').onchange=function(e){rot=e.target.checked;};
+document.getElementById('sMode').onchange=function(e){mode=e.target.value;build();};
+var rc=new THREE.Raycaster(),dn=null;
+cv.addEventListener('pointerdown',function(e){dn=[e.clientX,e.clientY];});
+cv.addEventListener('pointerup',function(e){if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>6)return;
+var r=cv.getBoundingClientRect();rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);
+var hs=rc.intersectObjects(G.children,true);
+for(var k=0;k<hs.length;k++){var u=hs[k].object.userData;if(!showLab&&hs[k].object.isSprite)continue;if(!showWat&&u.id&&ZN[u.id]&&ZN[u.id].water)continue;
+if(u.pt!==undefined){pickPt(u.pt);return;}if(u.id){pick(u.id);return;}}});
+/* quỹ đạo camera */
+var th=-0.5,ph=0.85,rad=64,tgt=new THREE.Vector3(9,0,2),pts={},pd=0;
+cv.addEventListener('pointerdown',function(e){cv.setPointerCapture(e.pointerId);pts[e.pointerId]=[e.clientX,e.clientY];});
+cv.addEventListener('pointermove',function(e){if(!pts[e.pointerId])return;var k=Object.keys(pts);
+if(k.length===1){th-=(e.clientX-pts[e.pointerId][0])*0.006;ph=Math.max(0.2,Math.min(1.5,ph-(e.clientY-pts[e.pointerId][1])*0.006));}
+pts[e.pointerId]=[e.clientX,e.clientY];
+if(k.length===2){var a=pts[k[0]],b=pts[k[1]],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pd)rad=Math.max(12,Math.min(110,rad*pd/d));pd=d;}});
+function up(e){delete pts[e.pointerId];pd=0;}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',function(e){e.preventDefault();rad=Math.max(12,Math.min(110,rad*(1+e.deltaY*0.001)));},{passive:false});
+function size(){var w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.fov=w<h?62:40;cam.updateProjectionMatrix();}
+addEventListener('resize',size);size();
+var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function loop(t){requestAnimationFrame(loop);
+if(rot&&!reduce)th+=0.003;
+if(!reduce){var tt=t*0.0016;WV.forEach(function(m){var a=m.geometry.attributes.position,ar=a.array,y0=m.userData.y0;for(var u=0;u<ar.length;u+=3)ar[u+1]=y0+0.022*Math.sin(ar[u]*1.7+ar[u+2]*1.1+tt*3);a.needsUpdate=true;});
+MV.forEach(function(m){m.row+=m.sp;if(m.row>N-8)m.row=8;if(m.row<8)m.row=N-8;var k=m.row|0,f=m.row-k,p=at(k,m.d,0.14).lerp(at(k+1,m.d,0.14),f);p.y+=Math.sin(t*0.002+m.row)*0.03;m.g.position.copy(p);m.g.rotation.y=-Math.atan2(SP[k+1].z-SP[k].z,SP[k+1].x-SP[k].x)+(m.sp<0?Math.PI:0);m.g.rotation.z=Math.sin(t*0.0016+m.row)*0.05;});
+CL.forEach(function(c){c.position.x+=c.userData.sp;if(c.position.x>22)c.position.x=-14;});
+if(FLG){var fa=FLG.geometry.attributes.position,fr=fa.array;for(var u2=0;u2<fr.length;u2+=3)fr[u2+2]=Math.sin(fr[u2]*6-t*0.006)*0.09*(fr[u2]+0.6);fa.needsUpdate=true;}
+BD.forEach(function(b){var an=t*b.sp+b.ph;b.g.position.set(b.c.x+Math.cos(an)*b.r,b.c.y+Math.sin(an*2)*0.12,b.c.z+Math.sin(an)*b.r);b.g.rotation.y=Math.atan2(-Math.sin(an),Math.cos(an));var fl=Math.sin(t*0.012+b.ph)*0.6;b.w1.rotation.z=fl;b.w2.rotation.z=-fl;});}
+CL.forEach(function(c){c.visible=showCl;});SEA.material.opacity=sel==='them'?0.15:0.8;SEA.visible=showWat;
+for(var k in ZN){var z=ZN[k],o=z.op;if(sel==='them'&&z.water)o=0.18;if(k===sel)o=Math.min(1,o+(reduce?0.15:0.2+Math.sin(t*0.004)*0.08));
+if(z.m.material.transparent)z.m.material.opacity=o;z.m.visible=z.water?showWat:true;}
+ZN.them.m.material.emissive.setHex(sel==='them'?0x4a3200:0);
+PT.forEach(function(p,k){p.scale.setScalar(k===selPt?1.7:1);});
+LB.forEach(function(l){l.visible=showLab;});
+cam.position.set(tgt.x+rad*Math.sin(ph)*Math.sin(th),tgt.y+rad*Math.cos(ph),tgt.z+rad*Math.sin(ph)*Math.cos(th));cam.lookAt(tgt);R.render(S,cam);}
+requestAnimationFrame(loop);
+})();
+</script></body></html>
